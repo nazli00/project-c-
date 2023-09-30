@@ -1,0 +1,1222 @@
+using Classes;
+using System.Threading;
+using System;
+using System.Collections.Generic;
+using System.Net.Mail;
+using System.Net;
+using System.Numerics;
+using System.Xml.Linq;
+using System.IO;
+using System.Text.Json;
+using System.Runtime.Serialization.Formatters.Binary;
+using static Classes.Database;
+
+namespace Classes
+{
+    class User
+    {
+        public User(string name, string surname, int age, string phone, string email, string password)
+        {
+            Name = name;
+            Surname = surname;
+            Age = age;
+            Phone = phone;
+            Email = email;
+            Password = password;
+            Id = ++Idcounter;
+        }
+        public User() { }
+        public int Id { get; set; }
+        public static int Idcounter = 2;
+        public string? Name { get; set; }
+        public string? Surname { get; set; }
+        public int Age { get; set; }
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
+        internal string? Password { get; set; }
+
+        public virtual void Show()
+        {
+            Console.WriteLine($"User Id: {Id}");
+            Console.WriteLine($"Name:    {Name}");
+            Console.WriteLine($"Surname: {Surname}");
+            Console.WriteLine($"Age :    {Age}");
+            Console.WriteLine($"Phone:   {Phone}");
+            Console.WriteLine($"Email:   {Email}");
+        }
+        internal void ShowPassword()
+        {
+            Console.WriteLine($"Password: {Password}");
+        }
+    }
+    class CV
+    {
+        public CV() { ++IDCV; }
+        public CV(string specialization, string school, string university, List<string> skills, List<string> companies, List<string> languages
+            , string hasdimploma, string gitlink, string linkedIn)
+        {
+            idcv = ++IDCV;
+            Specialization = specialization;
+            School = school;
+            Skills = skills;
+            Companies = companies;
+            Languages = languages;
+            University = university;
+            GitLink = gitlink;
+            LinkedIn = linkedIn;
+            HasDiploma = hasdimploma;
+        }
+        public int idcv { get; set; }
+
+        public static int IDCV = 0;
+        public string? Specialization { get; set; }
+        public string? School { get; set; }
+        public string? University { get; set; }
+        public List<string> Skills { get; set; } = new List<string>();
+        public List<string> Companies { get; set; } = new List<string>();
+        public List<string> Languages { get; set; } = new List<string>();
+        public string? HasDiploma { get; set; }
+        public string? GitLink { get; set; }
+        public string? LinkedIn { get; set; }
+
+        public void Show()
+        {
+            Console.WriteLine($"ID : {idcv}"); ;
+            Console.WriteLine($"Specialization: {Specialization}");
+            Console.WriteLine($"School: {School}");
+            Console.WriteLine($"University: {University}");
+
+            Console.WriteLine("Skills:");
+            foreach (var skill in Skills)
+            {
+                Console.WriteLine($" - {skill}");
+            }
+
+            Console.WriteLine("Companies:");
+            foreach (var company in Companies)
+            {
+                Console.WriteLine($" - {company}");
+            }
+
+            Console.WriteLine("Languages:");
+            foreach (var language in Languages)
+            {
+                Console.WriteLine($" - {language}");
+            }
+
+            Console.WriteLine($"Has Diploma: {HasDiploma}");
+            Console.WriteLine($"Git Link: {GitLink}");
+            Console.WriteLine($"LinkedIn: {LinkedIn}");
+        }
+    }
+
+    class Worker : User
+    {
+        public Worker(string name, string surname, int age, string phone, string email, string password, CV cv)
+            : base(name, surname, age, phone, email, password) => AddCV(cv);
+
+        public CV WorkerCV { get; set; } = new CV();
+        internal void AddCV(CV cv) => WorkerCV = cv;
+        public override void Show()
+        {
+            base.Show();
+            Console.WriteLine("Worker's CV:");
+            WorkerCV.Show();
+        }
+    }
+
+    class Employer : User
+    {
+
+        public Employer(string name, string surname, int age, string phone, string email, string password, Vacancy vacancy)
+            : base(name, surname, age, phone, email, password)
+        {
+            AddVacancy(vacancy);
+        }
+        public List<Vacancy> Vacancies { get; set; } = new List<Vacancy>();
+        public void AddVacancy(Vacancy vacancy)
+        {
+            Vacancies.Add(vacancy);
+        }
+
+        public override void Show()
+        {
+            base.Show();
+            Console.WriteLine("Employer's Vacancies:");
+            foreach (var vacancy in Vacancies)
+            {
+                vacancy.Show();
+            }
+        }
+    }
+
+    class Vacancy
+    {
+        public Vacancy(string title, string description, DateTime Start, DateTime End)
+        {
+            StartDate = Start;
+            EndDate = End;
+            Title = title;
+            Description = description;
+            idvacancy = ++Idvacancy;
+        }
+        public Vacancy() { ++Idvacancy; }
+
+        public int idvacancy { get; set; }
+        public static int Idvacancy = 0;
+        public string? Title { get; set; }
+        public string? Description { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+
+        public void Show()
+        {
+            Console.WriteLine($"Vacancy Id: {idvacancy}");
+            Console.WriteLine($"Title: {Title}");
+            Console.WriteLine($"Description: {Description}");
+            Console.WriteLine($"Posting Date: {StartDate}");
+            Console.WriteLine($"Deadline Date: {EndDate}");
+        }
+    }
+
+    internal class Admin : User
+    {
+        internal Admin(string name, string surname,
+            int age, string phone, string email, string password)
+        {
+            Id = 1;
+            Name = name;
+            Surname = surname;
+            Age = age;
+            Phone = phone;
+            Email = email;
+            Password = password;
+        }
+    }
+
+    internal class Database
+    {
+        internal List<Worker> workers = new List<Worker>();
+        internal List<Employer> employers = new List<Employer>();
+        internal List<User> users = new List<User>();
+        private Admin admin = new Admin("nazli", "rzazade", 16, "055-111-11-11", "nazlirzazade8@gmail.com", "adminpassword");
+        internal List<string> notifications = new List<string>();
+        private string databaseFilePath = "database.json";
+
+        public void NotificationShow(Database d, string to)
+        {
+            foreach (var a in d.users)
+            {
+                if (a.Email == to)
+                {
+                    foreach (var b in d.notifications)
+                    {
+                        Console.WriteLine(b);
+                    }
+                }
+            }
+        }
+        public void LookofMenu(List<string> menu, int selectedIndex)
+        {
+            for (int i = 0; i < 13; i++)
+            {
+                Console.WriteLine("");
+            }
+
+            for (int i = 0; i < menu.Count; i++)
+            {
+                if (i == selectedIndex)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.Write("\t\t\t\t\t\t\t");
+                }
+                else { Console.Write("\t\t\t\t\t\t\t "); }
+
+                Console.WriteLine(menu[i]);
+                Console.ResetColor();
+            }
+        }
+        internal void LookofMenu_2(List<string> menu, int selectedIndex)
+        {
+            Console.Clear();
+            Console.Write(@"
+# # # #        #####       # # # #    # # # #              #       # # # # 
+#      #     #       #    #          #                    # #            #
+#  ##   #   #         #   #          #                   #   #          #
+#  ##   #   #   # #   #    # #         # #               #   #         #
+# ----<     #   # #   #       # #         # #           #######       #
+#  ##   #   #         #          #           #          #     #      #
+#       #    #       #           #           #         #       #    #
+# # # #        #####      # # # #     # # # #          #       #   # # # #
+");
+            Console.WriteLine("\n\n\n\n\n");
+            Console.Write("\t\t\t\t");
+            for (int i = 0; i < menu.Count; i++)
+            {
+                if (i == selectedIndex)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                }
+                Console.Write($"{menu[i]}");
+                if (i < menu.Count - 1)
+                {
+                    Console.Write("     ");
+                }
+                Console.ResetColor();
+            }
+            Console.WriteLine("\n\n\n\n");
+        }
+        public void SignUpGuest(User user)
+        {
+            users.Add(user);
+
+        }
+        public void SignUpWorker(Worker worker)
+        {
+            workers.Add(worker);
+            users.Add(worker);
+        }
+        public void SignUpEmployer(Employer employer)
+        {
+            employers.Add(employer);
+            users.Add(employer);
+        }
+        public User? LogIn(string email, string password)
+        {
+            User? user = users.Find(u => u.Email == email);
+            if (user != null)
+            {
+                if (user.Password == password)
+                {
+                    Console.WriteLine($"User {user.Name} signed in.");
+                    return user;
+                }
+                else { Console.WriteLine("Incorrect password."); }
+            }
+            else { Console.WriteLine("User not found."); }
+
+            return null;
+        }
+        internal User? LoginAdmin(string email, string pass)
+        {
+            if (admin.Email == email && admin.Password == pass)
+            {
+                return admin;
+            }
+            return null;
+        }
+        public Vacancy DropAnnouncementVacancy()
+        {
+            Console.WriteLine("Vacancie :");
+            Console.Write("Enter title :");
+            string title = Console.ReadLine();
+            Console.Write("Enter description :");
+            string description = Console.ReadLine();
+            DateTime StartDate = DateTime.Now;
+            Console.Write("Enter deadline Date (yyyy-MM-dd): ");
+            DateTime EndDate = StartDate;
+            if (DateTime.TryParse(Console.ReadLine(), out DateTime _deadline))
+            {
+                EndDate = _deadline;
+            }
+            else
+            {
+                Console.WriteLine("Invalid date format. Please enter a date in yyyy-MM-dd format.");
+            }
+
+            Vacancy vacancy = new Vacancy(title, description, StartDate, EndDate);
+            return vacancy;
+        }
+        public CV DropAnnouncementCV()
+        {
+            Console.Write("Enter your specialization: ");
+            string specialization = Console.ReadLine();
+            Console.Write("Enter your school: ");
+            string school = Console.ReadLine();
+            Console.Write("Enter your university: ");
+            string university = Console.ReadLine();
+            Console.WriteLine(@"Enter your skills :
+    (tap s if you want to stop and tap double enter if you want to add more skills) ");
+            List<string> skills = new List<string>();
+            int i = 1;
+            while (true)
+            {
+                var key = Console.ReadKey();
+
+                if (key.KeyChar == 's')
+                {
+                    break;
+                }
+                Console.Write($"{i}.");
+                string? skill = Console.ReadLine();
+                ++i;
+
+                skills.Add(skill);
+            }
+            Console.WriteLine("");
+            i = 1;
+            List<string> companies = new List<string>();
+            Console.WriteLine(@"Enter companies that you have worked before :
+    (tap s if you want to stop and tap double enter if you want to add more companies) ");
+            while (true)
+            {
+                var key = Console.ReadKey();
+
+                if (key.KeyChar == 's')
+                {
+                    break;
+                }
+                Console.Write($"{i}.");
+                string? company = Console.ReadLine();
+                ++i;
+
+                companies.Add(company);
+            }
+            Console.WriteLine("");
+            i = 1;
+            List<string> languages = new List<string>();
+            Console.WriteLine(@"Enter language that you know :
+    (tap s if you want to stop and tap double enter if you want to add more language) ");
+            while (true)
+            {
+                var key = Console.ReadKey();
+
+                if (key.KeyChar == 's')
+                {
+                    break;
+                }
+                Console.Write($"{i}.");
+                string? language = Console.ReadLine();
+                ++i;
+
+                languages.Add(language);
+            }
+            Console.WriteLine("");
+            Console.Write("Enter your hasDiploma: ");
+            string hasdiploma = Console.ReadLine();
+            Console.Write("Enter your gitLink: ");
+            string gitlink = Console.ReadLine();
+            Console.Write("Enter your linkedIn: ");
+            string linkedIn = Console.ReadLine();
+
+            CV cv = new CV(specialization, school, university, skills, companies, languages, hasdiploma, gitlink, linkedIn);
+            return cv;
+        }
+        internal void AddAdmintoUser() => users.Add(admin);
+        internal void WorkerEmployer(Database database, int choice)
+        {
+
+            Console.Write("Enter your name: ");
+            string? name = Console.ReadLine();
+            Console.Write("Enter your surname: ");
+            string? surname = Console.ReadLine();
+            Console.Write("Enter your age: ");
+            int age = 0;
+            if (int.TryParse(Console.ReadLine(), out int _age))
+            {
+                age = _age;
+            }
+            Console.Write("Enter your phone: ");
+            string? phone = Console.ReadLine();
+            Console.Write("Enter your email: ");
+            string? email = Console.ReadLine();
+            Console.Write("Enter your password: ");
+            string? password = Console.ReadLine();
+
+            if (choice == 1)
+            {
+                CV cv = DropAnnouncementCV();
+                Worker worker = new Worker(name, surname, age, phone, email, password, cv);
+
+                database.SignUpWorker(worker);
+
+            }
+            else if (choice == 2)
+            {
+                Vacancy vacancy = DropAnnouncementVacancy();
+                Employer employer = new Employer(name, surname, age, phone, email, password, vacancy);
+
+                database.SignUpEmployer(employer);
+            }
+        }
+
+        public void WriteDatabaseToFile(Database database)
+        {
+            try
+            {
+                string jsonString = JsonSerializer.Serialize(database);
+
+                File.WriteAllText(databaseFilePath, jsonString);
+
+                Console.WriteLine("Database saved to JSON file successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error while saving database to JSON: " + ex.Message);
+            }
+        }
+
+        public Database ReadDatabaseFromFile()
+        {
+            try
+            {
+                string jsonString = File.ReadAllText(databaseFilePath);
+
+                Database database = JsonSerializer.Deserialize<Database>(jsonString);
+
+                Console.WriteLine("Database loaded from JSON file successfully.");
+                return database;
+            }
+            catch (FileNotFoundException)
+            {
+                Console.WriteLine("Database file not found. Creating a new database.");
+                return new Database();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error while loading database from JSON: " + ex.Message);
+                return new Database();
+            }
+        }
+    }
+    class Notification
+    {
+        public string Apply(Database d, ref User user, int id)
+        {
+            string? from = user.Email;
+            Console.WriteLine("from" + from);
+            string? passw = user.Password;
+            Console.WriteLine("from" + passw);
+            string? to = "";
+            foreach (var user_ in d.users)
+            {
+                if (user_.Id == id)
+                {
+                    Console.Write($"You are going to send email to {user_.Email}");
+                    to = user_.Email;
+                }
+            }
+            Console.Clear();
+            Console.WriteLine("Subject:");
+            string? subject = Console.ReadLine();
+            Console.WriteLine("Body:");
+            string? body = Console.ReadLine();
+            string message = $@"From : {user.Email}
+
+Subject:   {subject}
+
+{body}";
+            d.notifications.Add(message);
+
+            EmailSender.SendEmail(from, passw, to, subject, body);
+            return to;
+        }
+    }
+    class EmailSender
+    {
+        public static void SendEmail(string from, string passw, string to, string subject, string body)
+        {
+            //Burda smtpUsername , smtpPassword öz account melumatlarınızdan
+            //istifadə edərək isləyib isləmədiyini yoxlaya bilərsiz 
+            string? smtpServer = "smtp.gmail.com";
+            int smtpPort = 587;
+            string? smtpUsername = from;
+            string? smtpPassword = passw;
+            using (SmtpClient smtpClient = new SmtpClient(smtpServer, smtpPort))
+            {
+                smtpClient.EnableSsl = true;
+                smtpClient.Credentials = new NetworkCredential(smtpUsername, smtpPassword);
+
+                using (MailMessage mailMessage = new MailMessage())
+                {
+                    mailMessage.From = new MailAddress(smtpUsername);
+                    mailMessage.To.Add(to);
+                    mailMessage.Subject = subject;
+                    mailMessage.Body = body;
+                    mailMessage.IsBodyHtml = true;
+
+                    try
+                    {
+                        smtpClient.Send(mailMessage);
+                        Console.WriteLine("Email sent successfully!");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error sending email: {ex.Message}");
+                    }
+                }
+            }
+        }
+    }
+}
+
+namespace JobPortalApp
+{
+    class Program
+    {
+        public static void Main()
+        {
+
+            Database database = new Database();
+            database.AddAdmintoUser();
+            {
+                CV cv1 = new CV("Software Engineer", "High School", "University of Tech", new List<string> { "C#", "Java" }, new List<string> { "Company A", "Company B" }, new List<string> { "English", "Spanish" }, "Yes", "github.com/worker1", "linkedin.com/worker1");
+                CV cv2 = new CV("Web Developer", "College", "Tech University", new List<string> { "JavaScript", "HTML/CSS" }, new List<string> { "Company X", "Company Y" }, new List<string> { "English", "French" }, "Yes", "github.com/worker2", "linkedin.com/worker2");
+                CV cv3 = new CV("Data Scientist", "High School", "Data University", new List<string> { "Python", "R" }, new List<string> { "Data Company A", "Data Company B" }, new List<string> { "English", "German" }, "Yes", "github.com/worker3", "linkedin.com/worker3");
+                CV cv4 = new CV("Mobile App Developer", "College", "Tech University", new List<string> { "Swift", "Kotlin" }, new List<string> { "App Company X", "App Company Y" }, new List<string> { "English", "Spanish" }, "Yes", "github.com/worker4", "linkedin.com/worker4");
+                CV cv5 = new CV("Front-End Developer", "High School", "Design University", new List<string> { "JavaScript", "HTML/CSS" }, new List<string> { "Design Company A", "Design Company B" }, new List<string> { "English", "French" }, "Yes", "github.com/worker5", "linkedin.com/worker5");
+                CV cv6 = new CV("AI Researcher", "College", "AI Institute", new List<string> { "Python", "TensorFlow" }, new List<string> { "AI Research Lab X", "AI Research Lab Y" }, new List<string> { "English", "Chinese" }, "Yes", "github.com/worker6", "linkedin.com/worker6");
+                CV cv7 = new CV("Database Administrator", "High School", "Tech University", new List<string> { "SQL", "NoSQL" }, new List<string> { "Database Company A", "Database Company B" }, new List<string> { "English", "Spanish" }, "Yes", "github.com/worker7", "linkedin.com/worker7");
+                CV cv8 = new CV("UI/UX Designer", "College", "Design University", new List<string> { "UI/UX Design", "Adobe Creative Suite" }, new List<string> { "Design Studio X", "Design Studio Y" }, new List<string> { "English", "French" }, "Yes", "github.com/worker8", "linkedin.com/worker8");
+                CV cv9 = new CV("Game Developer", "High School", "Game Dev Institute", new List<string> { "Unity", "C++" }, new List<string> { "Game Studio A", "Game Studio B" }, new List<string> { "English", "Japanese" }, "Yes", "github.com/worker9", "linkedin.com/worker9");
+                CV cv10 = new CV("Network Engineer", "College", "Tech University", new List<string> { "Networking Protocols", "Security" }, new List<string> { "Network Company X", "Network Company Y" }, new List<string> { "English", "Spanish" }, "Yes", "github.com/worker10", "linkedin.com/worker10");
+
+                Vacancy vacancy1 = new Vacancy("Software Developer", "Looking for experienced software developers.", DateTime.Now, DateTime.Now.AddDays(30));
+                Vacancy vacancy2 = new Vacancy("Web Designer", "Seeking creative web designers.", DateTime.Now, DateTime.Now.AddDays(45));
+                Vacancy vacancy3 = new Vacancy("Data Analyst", "Hiring data analysts for data-driven projects.", DateTime.Now, DateTime.Now.AddDays(20));
+                Vacancy vacancy4 = new Vacancy("iOS Developer", "Join our iOS app development team.", DateTime.Now, DateTime.Now.AddDays(25));
+                Vacancy vacancy5 = new Vacancy("Front-End Developer", "Front-end wizards wanted for amazing projects.", DateTime.Now, DateTime.Now.AddDays(30));
+                Vacancy vacancy6 = new Vacancy("AI Researcher", "Join our cutting-edge AI research team.", DateTime.Now, DateTime.Now.AddDays(40));
+                Vacancy vacancy7 = new Vacancy("Database Administrator", "Database gurus, we need you!", DateTime.Now, DateTime.Now.AddDays(35));
+                Vacancy vacancy8 = new Vacancy("UI/UX Designer", "Design user-friendly interfaces.", DateTime.Now, DateTime.Now.AddDays(50));
+                Vacancy vacancy9 = new Vacancy("Game Developer", "Passionate about game development? Join us.", DateTime.Now, DateTime.Now.AddDays(30));
+                Vacancy vacancy10 = new Vacancy("Network Engineer", "Network experts, apply here.", DateTime.Now, DateTime.Now.AddDays(30));
+
+                Worker worker1 = new Worker("Alice", "Johnson", 25, "123-456-7890", "alice@example.com", "securepass1", cv1);
+                Worker worker2 = new Worker("Bob", "Smith", 28, "987-654-3210", "bob@example.com", "securepass2", cv2);
+                Worker worker3 = new Worker("Charlie", "Brown", 23, "111-222-3333", "charlie@example.com", "securepass3", cv3);
+                Worker worker4 = new Worker("David", "Williams", 26, "444-555-6666", "david@example.com", "securepass4", cv4);
+                Worker worker5 = new Worker("Eva", "Davis", 22, "777-888-9999", "eva@example.com", "securepass5", cv5);
+                Worker worker6 = new Worker("Frank", "Martin", 24, "123-987-4560", "frank@example.com", "securepass6", cv6);
+                Worker worker7 = new Worker("Grace", "Lee", 27, "555-123-7890", "grace@example.com", "securepass7", cv7);
+                Worker worker8 = new Worker("Henry", "Anderson", 29, "555-555-5555", "henry@example.com", "securepass8", cv8);
+                Worker worker9 = new Worker("Ivy", "Clark", 25, "555-999-3333", "ivy@example.com", "securepass9", cv9);
+                Worker worker10 = new Worker("Jack", "Hall", 30, "555-000-7777", "jack@example.com", "securepass10", cv10);
+
+                Employer employer1 = new Employer("Xavier", "Miller", 35, "555-111-1111", "xavier@example.com", "securepass11", vacancy1);
+                Employer employer2 = new Employer("Yvonne", "Brown", 40, "555-222-2222", "yvonne@example.com", "securepass12", vacancy2);
+                Employer employer3 = new Employer("Zara", "Garcia", 45, "555-333-3333", "zara@example.com", "securepass13", vacancy3);
+                Employer employer4 = new Employer("Victor", "Harris", 50, "555-444-4444", "victor@example.com", "securepass14", vacancy4);
+                Employer employer5 = new Employer("Olivia", "Davis", 42, "555-555-5555", "olivia@example.com", "securepass15", vacancy5);
+                Employer employer6 = new Employer("William", "Moore", 38, "555-666-6666", "william@example.com", "securepass16", vacancy6);
+                Employer employer7 = new Employer("Sophia", "Martin", 37, "555-777-7777", "sophia@example.com", "securepass17", vacancy7);
+                Employer employer8 = new Employer("Thomas", "Walker", 34, "555-888-8888", "thomas@example.com", "securepass18", vacancy8);
+                Employer employer9 = new Employer("Chloe", "Lopez", 33, "555-999-9999", "chloe@example.com", "securepass19", vacancy9);
+                Employer employer10 = new Employer("Lucas", "Green", 31, "555-000-0000", "lucas@example.com", "securepass20", vacancy10);
+
+                CV cv11 = new CV("Software Engineer", "High School", "University of Tech", new List<string> { "C#", "Java" }, new List<string> { "Company A", "Company B" }, new List<string> { "English", "Spanish" }, "Yes", "github.com/worker1", "linkedin.com/worker1");
+                CV cv12 = new CV("Web Developer", "College", "Tech University", new List<string> { "JavaScript", "HTML/CSS" }, new List<string> { "Company X", "Company Y" }, new List<string> { "English", "French" }, "Yes", "github.com/worker2", "linkedin.com/worker2");
+                CV cv13 = new CV("Data Scientist", "High School", "Data University", new List<string> { "Python", "R" }, new List<string> { "Data Company A", "Data Company B" }, new List<string> { "English", "German" }, "Yes", "github.com/worker3", "linkedin.com/worker3");
+                CV cv14 = new CV("Mobile App Developer", "College", "Tech University", new List<string> { "Swift", "Kotlin" }, new List<string> { "App Company X", "App Company Y" }, new List<string> { "English", "Spanish" }, "Yes", "github.com/worker4", "linkedin.com/worker4");
+                CV cv15 = new CV("Front-End Developer", "High School", "Design University", new List<string> { "JavaScript", "HTML/CSS" }, new List<string> { "Design Company A", "Design Company B" }, new List<string> { "English", "French" }, "Yes", "github.com/worker5", "linkedin.com/worker5");
+                CV cv16 = new CV("AI Researcher", "College", "AI Institute", new List<string> { "Python", "TensorFlow" }, new List<string> { "AI Research Lab X", "AI Research Lab Y" }, new List<string> { "English", "Chinese" }, "Yes", "github.com/worker6", "linkedin.com/worker6");
+                CV cv17 = new CV("Database Administrator", "High School", "Tech University", new List<string> { "SQL", "NoSQL" }, new List<string> { "Database Company A", "Database Company B" }, new List<string> { "English", "Spanish" }, "Yes", "github.com/worker7", "linkedin.com/worker7");
+                CV cv18 = new CV("UI/UX Designer", "College", "Design University", new List<string> { "UI/UX Design", "Adobe Creative Suite" }, new List<string> { "Design Studio X", "Design Studio Y" }, new List<string> { "English", "French" }, "Yes", "github.com/worker8", "linkedin.com/worker8");
+                CV cv19 = new CV("Game Developer", "High School", "Game Dev Institute", new List<string> { "Unity", "C++" }, new List<string> { "Game Studio A", "Game Studio B" }, new List<string> { "English", "Japanese" }, "Yes", "github.com/worker9", "linkedin.com/worker9");
+                CV cv20 = new CV("Network Engineer", "College", "Tech University", new List<string> { "Networking Protocols", "Security" }, new List<string> { "Network Company X", "Network Company Y" }, new List<string> { "English", "Spanish" }, "Yes", "github.com/worker10", "linkedin.com/worker10");
+
+                Vacancy vacancy11 = new Vacancy("Software Developer", "Looking for experienced software developers.", DateTime.Now, DateTime.Now.AddDays(30));
+                Vacancy vacancy12 = new Vacancy("Web Designer", "Seeking creative web designers.", DateTime.Now, DateTime.Now.AddDays(45));
+                Vacancy vacancy13 = new Vacancy("Data Analyst", "Hiring data analysts for data-driven projects.", DateTime.Now, DateTime.Now.AddDays(20));
+                Vacancy vacancy14 = new Vacancy("iOS Developer", "Join our iOS app development team.", DateTime.Now, DateTime.Now.AddDays(25));
+                Vacancy vacancy15 = new Vacancy("Front-End Developer", "Front-end wizards wanted for amazing projects.", DateTime.Now, DateTime.Now.AddDays(30));
+                Vacancy vacancy16 = new Vacancy("AI Researcher", "Join our cutting-edge AI research team.", DateTime.Now, DateTime.Now.AddDays(40));
+                Vacancy vacancy17 = new Vacancy("Database Administrator", "Database gurus, we need you!", DateTime.Now, DateTime.Now.AddDays(35));
+                Vacancy vacancy18 = new Vacancy("UI/UX Designer", "Design user-friendly interfaces.", DateTime.Now, DateTime.Now.AddDays(50));
+                Vacancy vacancy19 = new Vacancy("Game Developer", "Passionate about game development? Join us.", DateTime.Now, DateTime.Now.AddDays(30));
+                Vacancy vacancy20 = new Vacancy("Network Engineer", "Network experts, apply here.", DateTime.Now, DateTime.Now.AddDays(30));
+
+                Worker worker11 = new Worker("Alice", "Johnson", 25, "123-456-7890", "alice@example.com", "securepass11", cv11);
+                Worker worker12 = new Worker("Bob", "Smith", 28, "987-654-3210", "bob@example.com", "securepass12", cv12);
+                Worker worker13 = new Worker("Charlie", "Brown", 23, "111-222-3333", "charlie@example.com", "securepass13", cv13);
+                Worker worker14 = new Worker("David", "Williams", 26, "444-555-6666", "david@example.com", "securepass14", cv14);
+                Worker worker15 = new Worker("Eva", "Davis", 22, "777-888-9999", "eva@example.com", "securepass15", cv15);
+                Worker worker16 = new Worker("Frank", "Martin", 24, "123-987-4560", "frank@example.com", "securepass16", cv16);
+                Worker worker17 = new Worker("Grace", "Lee", 27, "555-123-7890", "grace@example.com", "securepass17", cv17);
+                Worker worker18 = new Worker("Henry", "Anderson", 29, "555-555-5555", "henry@example.com", "securepass18", cv18);
+                Worker worker19 = new Worker("Ivy", "Clark", 25, "555-999-3333", "ivy@example.com", "securepass19", cv19);
+                Worker worker20 = new Worker("Jack", "Hall", 30, "555-000-7777", "jack@example.com", "securepass20", cv20);
+
+                Employer employer11 = new Employer("Xavier", "Miller", 35, "555-111-1111", "xavier@example.com", "securepass11", vacancy11);
+                Employer employer12 = new Employer("Yvonne", "Brown", 40, "555-222-2222", "yvonne@example.com", "securepass12", vacancy12);
+                Employer employer13 = new Employer("Zara", "Garcia", 45, "555-333-3333", "zara@example.com", "securepass13", vacancy13);
+                Employer employer14 = new Employer("Victor", "Harris", 50, "555-444-4444", "victor@example.com", "securepass14", vacancy14);
+                Employer employer15 = new Employer("Olivia", "Davis", 42, "555-555-5555", "olivia@example.com", "securepass15", vacancy15);
+                Employer employer16 = new Employer("William", "Moore", 38, "555-666-6666", "william@example.com", "securepass16", vacancy16);
+                Employer employer17 = new Employer("Sophia", "Martin", 37, "555-777-7777", "sophia@example.com", "securepass17", vacancy17);
+                Employer employer18 = new Employer("Thomas", "Walker", 34, "555-888-8888", "thomas@example.com", "securepass18", vacancy18);
+                Employer employer19 = new Employer("Chloe", "Lopez", 33, "555-999-9999", "chloe@example.com", "securepass19", vacancy19);
+                Employer employer20 = new Employer("Lucas", "Green", 31, "555-000-0000", "lucas@example.com", "securepass20", vacancy20);
+
+                database.SignUpWorker(worker1);
+                database.SignUpWorker(worker2);
+                database.SignUpWorker(worker3);
+                database.SignUpWorker(worker4);
+                database.SignUpWorker(worker5);
+                database.SignUpWorker(worker6);
+                database.SignUpWorker(worker7);
+                database.SignUpWorker(worker8);
+                database.SignUpWorker(worker9);
+                database.SignUpWorker(worker10);
+
+                database.SignUpEmployer(employer1);
+                database.SignUpEmployer(employer2);
+                database.SignUpEmployer(employer3);
+                database.SignUpEmployer(employer4);
+                database.SignUpEmployer(employer5);
+                database.SignUpEmployer(employer6);
+                database.SignUpEmployer(employer7);
+                database.SignUpEmployer(employer8);
+                database.SignUpEmployer(employer9);
+                database.SignUpEmployer(employer10);
+
+                database.SignUpWorker(worker11);
+                database.SignUpWorker(worker12);
+                database.SignUpWorker(worker13);
+                database.SignUpWorker(worker14);
+                database.SignUpWorker(worker15);
+                database.SignUpWorker(worker16);
+                database.SignUpWorker(worker17);
+                database.SignUpWorker(worker18);
+                database.SignUpWorker(worker19);
+                database.SignUpWorker(worker20);
+
+                database.SignUpEmployer(employer11);
+                database.SignUpEmployer(employer12);
+                database.SignUpEmployer(employer13);
+                database.SignUpEmployer(employer14);
+                database.SignUpEmployer(employer15);
+                database.SignUpEmployer(employer16);
+                database.SignUpEmployer(employer17);
+                database.SignUpEmployer(employer18);
+                database.SignUpEmployer(employer19);
+                database.SignUpEmployer(employer20);
+            }//CVs,vacancies, workers and employers
+            database.ReadDatabaseFromFile();
+            int selectedIndex = 0;
+
+
+            List<string> menu = new List<string>
+            {
+                "Register",
+                "Guest",
+                "Admin",
+                "Exit"
+            };
+
+            int i = 0;
+            database.WriteDatabaseToFile(database);
+
+            User? user_2 = null;
+
+            HandleMenu(database, ref menu, ref selectedIndex, 3, ref i, selectedIndex, ref user_2);
+
+        }
+        private static void HandleMenu(Database database, ref List<string> menu,
+            ref int selectedIndex, int recursionDepth, ref int i,
+            int indexWorkerEmplyer, ref User user)
+        {
+            i++;
+            selectedIndex = 0;
+            while (recursionDepth > 0)
+            {
+                Console.Clear();
+                database.LookofMenu(menu, selectedIndex);
+                ConsoleKeyInfo keyInfo = Console.ReadKey();
+
+                switch (keyInfo.Key)
+                {
+                    case ConsoleKey.UpArrow:
+                        if (selectedIndex > 0)
+                        {
+                            --selectedIndex;
+                        }
+                        break;
+                    case ConsoleKey.DownArrow:
+                        if (selectedIndex < menu.Count - 1)
+                        {
+                            ++selectedIndex;
+                        }
+                        break;
+                    case ConsoleKey.Enter:
+                        menu.Clear();
+                        recursionDepth--;
+                        if (i == 1 && selectedIndex == 0)
+                        {
+                            menu = new List<string>
+                            {
+                                "Worker",
+                                "Employer",
+                                "Exit"
+                            };
+                            HandleMenu(database, ref menu, ref selectedIndex, recursionDepth, ref i, selectedIndex, ref user);
+                        }
+                        else if (i == 1 && selectedIndex == 1)
+                        {
+                            string name = "User1";
+                            string surname = "UserSurname1";
+                            int age = 0;
+                            string email = string.Empty;
+                            string phone = string.Empty;
+                            string password = string.Empty;
+                            User user_ = new User(name, surname, age, phone, email, password);
+                            database.SignUpGuest(user_);
+
+                            List<string> mainMenu = new List<string>
+                            {
+                                "CVs",
+                                "Vacancies",
+                                "About us",
+                                "Drop Announcement",
+                                "Exit"
+                            };
+                            MainPage(database, ref user_, mainMenu);
+                        }
+                        else if (i == 1 && selectedIndex == 2)
+                        {
+                            Console.WriteLine("Enter admin Email adress :");
+                            string? email = Console.ReadLine();
+                            Console.WriteLine("Enter admin password :");
+                            string? passw = Console.ReadLine();
+                            user = database.LoginAdmin(email, passw);
+                            string to = "";
+                            ShowMenu(database, ref user, to);
+
+                        }
+                        else if (i == 1 && selectedIndex == 3)
+                        {
+                            Console.WriteLine("Goodbye!");
+                            Environment.Exit(0);
+                            break;
+                        }
+                        if (i == 2 && selectedIndex == 0)
+                        {
+                            menu = new List<string>
+                            {
+                                "Log in",
+                                "sign up",
+                                "Exit"
+                            };
+                            HandleMenu(database, ref menu, ref selectedIndex, recursionDepth, ref i, 1, ref user);
+                        }
+                        else if (i == 2 && selectedIndex == 1)
+                        {
+                            menu = new List<string>
+                            {
+                                "Log in",
+                                "sign up",
+                                "Exit"
+                            };
+                            HandleMenu(database, ref menu, ref selectedIndex, recursionDepth, ref i, 2, ref user);
+                        }
+                        else if (i == 2 && selectedIndex == 2)
+                        {
+                            i -= 2;
+                            recursionDepth += 2;
+                            menu = new List<string>
+                            {
+                                "Register",
+                                "Guest",
+                                "Admin",
+                                "Exit"
+                            };
+                            HandleMenu(database, ref menu, ref selectedIndex, recursionDepth, ref i, selectedIndex, ref user);
+                        }
+                        if (i == 3 && selectedIndex == 0)
+                        {
+
+                            Console.WriteLine("Enter your Email adress :");
+                            string email = Console.ReadLine();
+                            Console.WriteLine("Enter your password :");
+                            string passw = Console.ReadLine();
+                            user = database.LogIn(email, passw);
+                            Console.Clear();
+                            string to = "";
+                            ShowMenu(database, ref user, to);
+
+                        }
+                        else if (i == 3 && selectedIndex == 1)
+                        {
+                            database.WorkerEmployer(database, indexWorkerEmplyer);
+                            Console.Clear();
+                            Console.WriteLine("You can log in now:");
+                            Console.WriteLine("Enter your Email adress :");
+                            string email = Console.ReadLine();
+                            Console.WriteLine("Enter your password :");
+                            string passw = Console.ReadLine();
+                            user = database.LogIn(email, passw);
+                            Console.Clear();
+                            string to = "";
+                            ShowMenu(database, ref user, to);
+                        }
+                        else if (i == 3 && selectedIndex == 2)
+                        {
+                            i -= 2;
+                            recursionDepth += 2;
+                            menu = new List<string>
+                            {
+                                "Worker",
+                                "Employer",
+                                "Exit"
+                            };
+                            HandleMenu(database, ref menu, ref selectedIndex, recursionDepth, ref i, selectedIndex, ref user);
+
+                        }
+                        break;
+                }
+            }
+        }
+        private static void MainPage(Database database, ref User? user_, List<string> menu)
+        {
+            int selectedIndex = 0;
+            string to = "";
+            Console.Clear();
+            while (true)
+            {
+                database.LookofMenu_2(menu, selectedIndex);
+                ConsoleKeyInfo keyInfo = Console.ReadKey();
+
+                switch (keyInfo.Key)
+                {
+                    case ConsoleKey.UpArrow:
+                        if (selectedIndex > 0)
+                        {
+                            selectedIndex--;
+                        }
+                        break;
+                    case ConsoleKey.DownArrow:
+                        if (selectedIndex < menu.Count - 1)
+                        {
+                            selectedIndex++;
+                        }
+                        break;
+                    case ConsoleKey.Enter:
+                        string selectedMenuItem = menu[selectedIndex];
+                        switch (selectedMenuItem)
+                        {
+                            case "CVs":
+                                Console.WriteLine("All CVs:");
+                                foreach (var CV in database.workers)
+                                {
+                                    CV.Show();
+                                    Console.WriteLine();
+                                }
+                                Console.WriteLine("Do you want to apply?[y/n]");
+                                string choice = Console.ReadLine();
+                                if (choice == "y")
+                                {
+                                    Console.WriteLine("log in :");
+                                    Console.WriteLine("Enter your Email adress :");
+                                    string email = Console.ReadLine();
+                                    Console.WriteLine("Enter your password :");
+                                    string passw = Console.ReadLine();
+                                    user_ = database.LogIn(email, passw);
+                                    Console.WriteLine("Enter the id of user you want to apply :");
+                                    int id = 0;
+                                    if (int.TryParse(Console.ReadLine(), out int id_))
+                                    {
+                                        id = id_;
+                                    }
+                                    Notification? n = new Notification();
+                                    to = n.Apply(database, ref user_, id);
+                                    ShowMenu(database, ref user_, to);
+                                }
+                                break;
+                            case "Vacancies":
+                                Console.WriteLine("All Vacancies:");
+                                foreach (var employer in database.employers)
+                                {
+                                    employer.Show();
+                                    Console.WriteLine();
+                                }
+                                Console.WriteLine("Do you want to apply?[y/n]");
+                                string choice2 = Console.ReadLine();
+                                if (choice2 == "y")
+                                {
+                                    Console.WriteLine("log in :");
+                                    Console.WriteLine("Enter your Email adress :");
+                                    string email = Console.ReadLine();
+                                    Console.WriteLine("Enter your password :");
+                                    string passw = Console.ReadLine();
+                                    user_ = database.LogIn(email, passw);
+                                    Console.WriteLine("Enter the id of user you want to apply :");
+                                    int id = 0;
+                                    if (int.TryParse(Console.ReadLine(), out int id_))
+                                    {
+                                        id = id_;
+                                    }
+                                    Notification? n = new Notification();
+                                    to = n.Apply(database, ref user_, id);
+                                    ShowMenu(database, ref user_, to);
+                                }
+                                break;
+                            case "About us":
+                                Console.WriteLine("BOSS AZ is tapma platformasidir");
+                                break;
+                            case "Drop Announcement":
+                                List<string> menu_ = new List<string>
+                                {
+                                    "Worker",
+                                    "Employer",
+                                    "Back to Main Menu"
+                                };
+                                selectedIndex = 0;
+                                AnnouncementMenu(database, menu_, ref selectedIndex);
+                                break;
+                            case "Exit":
+
+                                List<string> _menu = new List<string>
+                                {
+                                    "Register",
+                                    "Guest",
+                                    "Admin",
+                                    "Exit"
+                                };
+                                int i = 0;
+                                User user = null;
+                                HandleMenu(database, ref _menu, ref selectedIndex, 3, ref i, 0, ref user);
+                                break;
+                        }
+                        Console.WriteLine("\nPress Enter to continue...");
+                        Console.ReadLine();
+                        Console.Clear();
+                        break;
+                }
+            }
+        }
+        private static void ShowMenu(Database database, ref User user_, string to)
+        {
+            List<string> menu_ = new List<string>
+            {
+                "Vacancies",
+                "Filtered Vacancies",
+                "Profile",
+                "Notifications",
+                "Main page",
+                "Exit"
+            };
+            int selectedIndex = 0;
+
+            while (true)
+            {
+                Console.Clear();
+                database.LookofMenu(menu_, selectedIndex);
+                ConsoleKeyInfo keyInfo = Console.ReadKey();
+
+                switch (keyInfo.Key)
+                {
+                    case ConsoleKey.UpArrow:
+                        if (selectedIndex > 0)
+                        {
+                            selectedIndex--;
+                        }
+                        break;
+                    case ConsoleKey.DownArrow:
+                        if (selectedIndex < menu_.Count - 1)
+                        {
+                            selectedIndex++;
+                        }
+                        break;
+                    case ConsoleKey.Enter:
+                        string selectedMenuItem = menu_[selectedIndex];
+                        switch (selectedMenuItem)
+                        {
+                            case "Vacancies":
+                                Console.WriteLine("All Vacancies:");
+                                foreach (var employer in database.employers)
+                                {
+                                    employer.Show();
+                                    Console.WriteLine();
+                                }
+
+                                Console.WriteLine("\nPress Enter to continue...");
+                                Console.ReadLine();
+                                break;
+                            case "Filtered Vacancies":
+                                FilterVacancies(database);
+                                break;
+                            case "Profile":
+                                Console.WriteLine("Your Profile");
+                                foreach (var a in database.users)
+                                {
+                                    if (a.Email == user_?.Email && a.Password == user_?.Password)
+                                    {
+                                        if (user_ != null)
+                                        {
+                                            user_.Show();
+                                        }
+                                    }
+                                }
+                                Console.WriteLine("\nPress Enter to continue...");
+                                Console.ReadLine();
+                                break;
+                            case "Notifications":
+                                if (to != "")
+                                {
+                                    string toEmail = to;
+                                    database.NotificationShow(database, toEmail);
+                                }
+                                Console.WriteLine("\nPress Enter to continue...");
+                                Console.ReadLine();
+                                break;
+                            case "Main page":
+                                List<string> menu = new List<string>
+                            {
+                                "CVs",
+                                "Vacancies",
+                                "About us",
+                                "Drop Announcement",
+                                "Exit"
+                            };
+
+                                MainPage(database, ref user_, menu);
+                                break;
+                            case "Exit":
+                                List<string> _menu = new List<string>
+                                {
+                                    "Register",
+                                    "Guest",
+                                    "Admin",
+                                    "Exit"
+                                };
+                                int i = 0;
+                                User user = null;
+                                HandleMenu(database, ref _menu, ref selectedIndex, 3, ref i, 0, ref user);
+                                break;
+                        }
+                        Console.Clear();
+                        break;
+                }
+            }
+        }
+        private static void FilterVacancies(Database database)
+        {
+            List<string> filtervacancies = new List<string>
+            {
+                "Software Engineer",
+                "Web Designer",
+                "Data Analyst",
+                "iOS Developer",
+                "Front-End Developer",
+                "AI Researcher",
+                "Database Administrator",
+                "UI/UX Designer",
+                "Game Developer",
+                "Network Engineer",
+                "go back"
+            };
+
+            int selectedIndex = 0;
+            while (selectedIndex != -1)
+            {
+                Console.Clear();
+                database.LookofMenu(filtervacancies, selectedIndex);
+                ConsoleKeyInfo keyInfo = Console.ReadKey();
+
+                switch (keyInfo.Key)
+                {
+                    case ConsoleKey.UpArrow:
+                        if (selectedIndex > 0)
+                        {
+                            selectedIndex--;
+                        }
+                        break;
+                    case ConsoleKey.DownArrow:
+                        if (selectedIndex < filtervacancies.Count - 1)
+                        {
+                            selectedIndex++;
+                        }
+                        break;
+                    case ConsoleKey.Enter:
+                        string v = filtervacancies[selectedIndex];
+
+                        foreach (var employer in database.employers)
+                        {
+                            foreach (var vacancy in employer.Vacancies)
+                            {
+                                if (vacancy.Title == v)
+                                {
+                                    employer.Show();
+                                    Console.WriteLine();
+                                }
+                            }
+                        }
+                        Console.WriteLine("\nPress Enter to continue...");
+                        Console.ReadLine();
+                        switch (v)
+                        {
+                            case "go back":
+                                selectedIndex = -1;
+                                break;
+                        }
+                        break;
+                }
+            }
+        }
+        private static void AnnouncementMenu(Database database, List<string> menu, ref int selectedIndex)
+        {
+            while (true)
+            {
+                Console.Clear();
+                database.LookofMenu(menu, selectedIndex);
+                ConsoleKeyInfo keyInfo = Console.ReadKey();
+
+                switch (keyInfo.Key)
+                {
+                    case ConsoleKey.UpArrow:
+                        if (selectedIndex > 0)
+                        {
+                            selectedIndex--;
+                        }
+                        break;
+                    case ConsoleKey.DownArrow:
+                        if (selectedIndex < menu.Count - 1)
+                        {
+                            selectedIndex++;
+                        }
+                        break;
+                    case ConsoleKey.Enter:
+
+                        if (selectedIndex == 0)
+                        {
+                            Console.WriteLine("Enter admin Email adress :");
+                            string? email = Console.ReadLine();
+                            Console.WriteLine("Enter admin password :");
+                            string? passw = Console.ReadLine();
+                            foreach (var worker in database.workers)
+                            {
+                                if (worker.Email == email && worker.Password == passw)
+                                {
+                                    CV cv = database.DropAnnouncementCV();
+                                    worker.AddCV(cv);
+                                }
+                            }
+                            return;
+                        }
+                        else if (selectedIndex == 1)
+                        {
+                            Console.WriteLine("Enter admin Email adress :");
+                            string? email = Console.ReadLine();
+                            Console.WriteLine("Enter admin password :");
+                            string? passw = Console.ReadLine();
+                            foreach (var employer in database.employers)
+                            {
+                                if (employer.Email == email && employer.Password == passw)
+                                {
+                                    Vacancy v = database.DropAnnouncementVacancy();
+                                    employer.AddVacancy(v);
+                                }
+                            }
+                            return;
+                        }
+                        else if (selectedIndex == 2)
+                        {
+
+                            return;
+                        }
+                        break;
+                }
+            }
+        }
+    }
+}
